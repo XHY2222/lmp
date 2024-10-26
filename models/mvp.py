@@ -206,7 +206,7 @@ class MVP(nn.Module):
             distance_div_mass = distance / mass.unsqueeze(-1)
             key_dist_div_mass = key_wise_distance / mass.unsqueeze(-1)
             key_dist_topk = key_dist_div_mass[topk].clone()
-            self.similarity_loss = - ((key_dist_topk.exp().sum() / (distance_topk.exp().sum() + key_dist_topk.exp().sum()) + 1e-6).log())
+            self.similarity_loss = - ((key_dist_topk.exp().sum() / (distance_div_mass.exp().sum() + key_dist_topk.exp().sum()) + 1e-6).log())
         else:    
             self.similarity_loss = distance.mean()
 
