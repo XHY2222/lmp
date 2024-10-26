@@ -196,7 +196,8 @@ class MVP(nn.Module):
         else:
             mass = 1.
         scaled_distance = distance * mass
-        topk = scaled_distance.topk(self.selection_size, dim=1, largest=False)[1]
+        topk = scaled_distance.topk(self.selection_size, dim=1, largest=False)[1]    
+        distance = distance[torch.arange(topk.size(0), device=topk.device).unsqueeze(1).repeat(1,self.selection_size), topk].squeeze().clone()
         e_prompts = self.e_prompts[topk].squeeze().clone()
         mask = self.mask[topk].mean(1).squeeze().clone()
         
@@ -204,11 +205,9 @@ class MVP(nn.Module):
             key_wise_distance = 1 - F.cosine_similarity(self.key.unsqueeze(1), self.key.detach(), dim=-1)
             distance_div_mass = distance / mass.unsqueeze(-1)
             key_dist_div_mass = key_wise_distance / mass.unsqueeze(-1)
-            distance_topk = distance_div_mass[topk].clone()
             key_dist_topk = key_dist_div_mass[topk].clone()
             self.similarity_loss = - ((key_dist_topk.exp().sum() / (distance_topk.exp().sum() + key_dist_topk.exp().sum()) + 1e-6).log())
         else:    
-            distance = distance[torch.arange(topk.size(0), device=topk.device).unsqueeze(1).repeat(1,self.selection_size), topk].squeeze().clone()
             self.similarity_loss = distance.mean()
 
         g_prompts = self.g_prompts[0].repeat(B, 1, 1)
