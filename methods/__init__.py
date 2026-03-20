@@ -5,6 +5,7 @@ from .finetuning import FT
 from .lwf import LwF
 from .rainbow_memory import RM
 from .mvp import MVP
+from .laprompt import LaPrompt
 
 __all__ = [
     "CLIB",
@@ -14,6 +15,7 @@ __all__ = [
     "LwF",
     "RM",
     "MVP",
+    "LaPrompt",
 ]
 
 def get_method(name):
@@ -27,6 +29,7 @@ def get_method(name):
             "lwf": LwF,
             "rm": RM,
             "mvp": MVP,
+            "laprompt": LaPrompt,
         }[name]
     except KeyError:
         raise NotImplementedError(f"Method {name} not implemented")

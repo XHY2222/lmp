@@ -133,6 +133,38 @@ def base_parser():
 
     parser.add_argument('--profile', action='store_true', help='enable profiling for ViT_Prompt')
 
+    # LaPrompt
+    parser.add_argument('--laprompt_use_ca', action='store_true', help='enable classifier alignment stage for laprompt mode')
+    parser.add_argument('--laprompt_ca_lr', type=float, default=0.01, help='classifier alignment learning rate for laprompt mode')
+    parser.add_argument('--laprompt_ca_epochs', type=int, default=5, help='classifier alignment epochs for laprompt mode')
+    parser.add_argument('--laprompt_ca_storage', type=str, default='variance', help='statistics type for laprompt mode [variance, covariance, multi-centroid]')
+    parser.add_argument('--laprompt_ema_decay', type=float, default=0.0, help='ema decay factor for laprompt prompt attention update')
+    parser.add_argument('--laprompt_tuned_epoch', type=int, default=1, help='task-level tuning epochs for laprompt mode')
+    parser.add_argument('--laprompt_n_centroids', type=int, default=5, help='number of centroids per class for laprompt multi-centroid storage')
+    parser.add_argument('--laprompt_add_num', type=int, default=8, help='minimum synthetic samples per class component during classifier alignment')
+    parser.add_argument('--laprompt_backbone_name', type=str, default='vit_base_patch16_224', help='timm backbone name for laprompt model')
+    parser.add_argument('--laprompt_pretrained', action=argparse.BooleanOptionalAction, default=True, help='enable pretrained timm weights for laprompt model')
+    parser.add_argument('--laprompt_use_task_token', action='store_true', help='enable task embedding in laprompt model')
+    parser.add_argument('--laprompt_max_tasks', type=int, default=100, help='maximum task ids for laprompt task embedding')
+    parser.add_argument('--pool_size', type=int, default=10, help='laprompt prompt pool size')
+    parser.add_argument('--length', type=int, default=5, help='laprompt prompt length')
+    parser.add_argument('--top_k', type=int, default=1, help='laprompt top-k prompts')
+    parser.add_argument('--prompt_layer_idx', type=int, nargs='*', default=None, help='laprompt prompt injection layers, e.g. --prompt_layer_idx 0 1 2')
+    parser.add_argument('--temperature', type=float, default=1.0, help='laprompt prompt routing temperature')
+    parser.add_argument('--laprompt_use_self_attn', action='store_true', help='enable prompt self-attention in laprompt pool')
+    parser.add_argument('--laprompt_batchwise_prompt', action=argparse.BooleanOptionalAction, default=True, help='enable batchwise prompt selection in laprompt pool')
+    parser.add_argument('--laprompt_use_layer_embedding', action=argparse.BooleanOptionalAction, default=True, help='enable layer embedding in laprompt prompt router')
+
+    # LaPrompt compatibility aliases (for laprompt_mix-like scripts)
+    parser.add_argument('--tuned_epoch', type=int, help='alias of --laprompt_tuned_epoch')
+    parser.add_argument('--ca_lr', type=float, help='alias of --laprompt_ca_lr')
+    parser.add_argument('--crct_epochs', type=int, help='alias of --laprompt_ca_epochs')
+    parser.add_argument('--ca_storage_efficient_method', type=str, help='alias of --laprompt_ca_storage')
+    parser.add_argument('--n_centroids', type=int, help='alias of --laprompt_n_centroids')
+    parser.add_argument('--add_num', type=int, help='alias of --laprompt_add_num')
+    parser.add_argument('--ema_decay', type=float, help='alias of --laprompt_ema_decay')
+    parser.add_argument('--freeze', action=argparse.BooleanOptionalAction, default=True, help='freeze ViT backbone for laprompt prefix-tuning')
+
     # parser.add_argument('--beta', type=float, default=0., help='# candidates to use for peeking into the updated head')
     # parser.add_argument('--charlie', type=float, default=0., help='# candidates to use for CP hyperparameter')
     
