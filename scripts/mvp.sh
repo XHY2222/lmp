@@ -3,7 +3,7 @@
 NOTE="MVP_CIFAR_0" # Short description of the experiment. (WARNING: logs/results with the same note will be overwritten!)
 
 MODE="mvp"
-DATASET="cifar100" # cifar10, cifar100, tinyimagenet, imagenet
+DATASET="imagenet-r" # cifar10, cifar100, tinyimagenet, imagenet-r
 N_TASKS=5
 N=50
 M=10
@@ -30,7 +30,7 @@ else
     exit 1
 fi
 
-for seed in 1 2 3 4 5
+for seed in 1
 do
     python main.py --mode $MODE \
     --dataset $DATASET \
@@ -38,7 +38,7 @@ do
     --rnd_seed $seed \
     --model_name $MODEL_NAME --opt_name $OPT_NAME --sched_name $SCHED_NAME \
     --lr $LR --batchsize $BATCHSIZE \
-    --memory_size $MEM_SIZE $GPU_TRANSFORM --online_iter $ONLINE_ITER --data_dir /local_datasets \
+    --memory_size $MEM_SIZE $GPU_TRANSFORM --online_iter $ONLINE_ITER --data_dir /root/autodl-tmp/dataset \
     --note $NOTE --eval_period $EVAL_PERIOD --n_worker 4 --rnd_NM \
     --use_mask --use_contrastiv --use_afs --use_gsf
 done

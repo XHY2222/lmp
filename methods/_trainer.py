@@ -245,6 +245,7 @@ class _Trainer():
             
             self.train_sampler.set_task(task_id)
             self.online_before_task(task_id)          
+            eval_dict = None
             for i, (images, labels, idx) in enumerate(self.train_dataloader):
                 if self.debug and (i+1) * self.temp_batchsize >= 500:
                     break
@@ -268,7 +269,8 @@ class _Trainer():
                             self.report_test(samples_cnt, eval_dict["avg_loss"], eval_dict['avg_acc'])
                         num_eval += self.eval_period
                 sys.stdout.flush()
-            self.report_test(samples_cnt, eval_dict["avg_loss"], eval_dict['avg_acc'])
+            if eval_dict is not None:
+                self.report_test(samples_cnt, eval_dict["avg_loss"], eval_dict['avg_acc'])
             self.online_after_task(task_id)
             
             test_sampler = OnlineTestSampler(self.test_dataset, self.exposed_classes)

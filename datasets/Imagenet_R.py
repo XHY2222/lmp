@@ -24,13 +24,15 @@ class Imagenet_R(ImageFolder):
         self.filename = 'imagenet-r.tar'
 
         fpath = os.path.join(self.root, self.filename)
-        if not os.path.isfile(fpath):
-            if not download:
-               raise RuntimeError('Dataset not found. You can use download=True to download it')
-            else:
-                print('Downloading from '+ self.url)
+        extracted_path = os.path.join(self.root, 'imagenet-r')
+
+        if not os.path.exists(extracted_path):
+            if not os.path.isfile(fpath):
+                if not download:
+                    raise RuntimeError('Dataset not found. Expected extracted folder or tar file in root.')
+                print('Downloading from ' + self.url)
                 download_url(self.url, self.root, filename=self.filename)
-        if not os.path.exists(os.path.join(self.root, 'imagenet-r')):
+
             import tarfile
             tar = tarfile.open(fpath, 'r')
             tar.extractall(os.path.join(self.root))

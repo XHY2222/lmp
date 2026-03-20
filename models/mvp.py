@@ -1,4 +1,5 @@
 from typing import TypeVar, Iterable
+import os
 import timm
 import torch
 import torch.nn as nn
@@ -14,6 +15,13 @@ T = TypeVar('T', bound = 'nn.Module')
 
 default_cfgs['vit_base_patch16_224_l2p'] = _cfg(
         url='https://storage.googleapis.com/vit_models/imagenet21k/ViT-B_16.npz',
+        file=os.environ.get(
+            'SIBLURRY_VIT_PRETRAIN',
+            '/root/autodl-tmp/laprompt-misa/pretrains/B_16-i21k-300ep-lr_0.001-aug_medium1-wd_0.1-do_0.0-sd_0.0--imagenet2012-steps_20k-lr_0.01-res_224.npz',
+        ) if os.path.isfile(os.environ.get(
+            'SIBLURRY_VIT_PRETRAIN',
+            '/root/autodl-tmp/laprompt-misa/pretrains/B_16-i21k-300ep-lr_0.001-aug_medium1-wd_0.1-do_0.0-sd_0.0--imagenet2012-steps_20k-lr_0.01-res_224.npz',
+        )) else None,
         num_classes=21843)
 
 # Register the backbone model to timm
