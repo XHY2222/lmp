@@ -9,6 +9,7 @@ from methods.finetuning import FT
 from methods.ewcpp import EWCpp
 from methods.lwf import LwF
 from methods.mvp import MVP
+from methods.laprompt import LaPrompt
 
 # torch.backends.cudnn.enabled = False
 methods = { "er"    : ER, 
@@ -17,7 +18,8 @@ methods = { "er"    : ER,
             "lwf"   : LwF,
             "Finetuning"    :FT,
             "ewc++" : EWCpp,
-            "mvp"   : MVP
+            "mvp"   : MVP,
+            "laprompt": LaPrompt
             }
 
 def main():

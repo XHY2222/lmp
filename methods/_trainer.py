@@ -61,6 +61,36 @@ class _Trainer():
         self.debug   = kwargs.get("debug")
         self.note    = kwargs.get("note")
         self.selection_size = kwargs.get("selection_size")
+        self.laprompt_backbone_name = kwargs.get("laprompt_backbone_name")
+        self.laprompt_pretrained = kwargs.get("laprompt_pretrained")
+        self.laprompt_use_task_token = kwargs.get("laprompt_use_task_token")
+        self.laprompt_max_tasks = kwargs.get("laprompt_max_tasks")
+        self.laprompt_ema_decay = kwargs.get("laprompt_ema_decay")
+        self.pool_size = kwargs.get("pool_size")
+        self.length = kwargs.get("length")
+        self.top_k_prompt = kwargs.get("top_k")
+        self.prompt_layer_idx = kwargs.get("prompt_layer_idx")
+        self.temperature = kwargs.get("temperature")
+        self.laprompt_use_self_attn = kwargs.get("laprompt_use_self_attn")
+        self.laprompt_batchwise_prompt = kwargs.get("laprompt_batchwise_prompt")
+        self.laprompt_use_layer_embedding = kwargs.get("laprompt_use_layer_embedding")
+        self.freeze = kwargs.get("freeze")
+
+        # Compatibility aliases for laprompt-style scripts
+        if kwargs.get("tuned_epoch") is not None:
+            self.laprompt_tuned_epoch = kwargs.get("tuned_epoch")
+        if kwargs.get("ca_lr") is not None:
+            self.laprompt_ca_lr = kwargs.get("ca_lr")
+        if kwargs.get("crct_epochs") is not None:
+            self.laprompt_ca_epochs = kwargs.get("crct_epochs")
+        if kwargs.get("ca_storage_efficient_method") is not None:
+            self.laprompt_ca_storage = kwargs.get("ca_storage_efficient_method")
+        if kwargs.get("n_centroids") is not None:
+            self.laprompt_n_centroids = kwargs.get("n_centroids")
+        if kwargs.get("add_num") is not None:
+            self.laprompt_add_num = kwargs.get("add_num")
+        if kwargs.get("ema_decay") is not None:
+            self.laprompt_ema_decay = kwargs.get("ema_decay")
 
         self.eval_period     = kwargs.get("eval_period")
         self.temp_batchsize  = kwargs.get("temp_batchsize")
@@ -215,7 +245,27 @@ class _Trainer():
 
         self.dataset, self.mean, self.std, self.n_classes = get_dataset(self.dataset_name)
         print(f"Building model ({self.model_name})")
-        self.model, self.inp_size = get_model(self.model_name, num_classes = self.n_classes)
+        model_kwargs = {"num_classes": self.n_classes}
+        if self.model_name.lower() == "laprompt":
+            model_kwargs.update(
+                {
+                    "backbone_name": self.laprompt_backbone_name,
+                    "pretrained": self.laprompt_pretrained,
+                    "use_task_token": self.laprompt_use_task_token,
+                    "max_tasks": self.laprompt_max_tasks,
+                    "pool_size": self.pool_size,
+                    "length": self.length,
+                    "top_k": self.top_k_prompt,
+                    "prompt_layer_idx": self.prompt_layer_idx,
+                    "temperature": self.temperature,
+                    "ema_decay": self.laprompt_ema_decay,
+                    "use_self_attn": self.laprompt_use_self_attn,
+                    "batchwise_prompt": self.laprompt_batchwise_prompt,
+                    "use_layer_embedding": self.laprompt_use_layer_embedding,
+                    "freeze": self.freeze,
+                }
+            )
+        self.model, self.inp_size = get_model(self.model_name, **model_kwargs)
         self.setup_transforms()
         self.setup_dataset()
         self.setup_distributed_model()

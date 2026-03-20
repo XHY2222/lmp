@@ -3,11 +3,13 @@ import timm
 from .dualprompt import DualPrompt
 from .l2p import L2P
 from .mvp import MVP
+from .laprompt import LaPrompt
 
 __all__ = [
     "DualPrompt",
     "l2p",
-    "vision_trainsfomer"
+    "vision_trainsfomer",
+    "LaPrompt",
 ]
 
 def get_model(name, **kwargs):
@@ -29,10 +31,14 @@ def get_model(name, **kwargs):
                         param.requires_grad = False
             return (model, 224)
         else:
-            return {
-                "dualprompt": (DualPrompt(**kwargs), 224),
-                "l2p": (L2P(**kwargs), 224),
-                "mvp": (MVP(**kwargs), 224),
-            }[name]
+            if name == "dualprompt":
+                return (DualPrompt(**kwargs), 224)
+            if name == "l2p":
+                return (L2P(**kwargs), 224)
+            if name == "mvp":
+                return (MVP(**kwargs), 224)
+            if name == "laprompt":
+                return (LaPrompt(**kwargs), 224)
+            raise KeyError(name)
     except KeyError:
         raise NotImplementedError(f"Model {name} not implemented")
