@@ -164,6 +164,11 @@ def base_parser():
     parser.add_argument('--add_num', type=int, help='alias of --laprompt_add_num')
     parser.add_argument('--ema_decay', type=float, help='alias of --laprompt_ema_decay')
     parser.add_argument('--freeze', action=argparse.BooleanOptionalAction, default=True, help='freeze ViT backbone for laprompt prefix-tuning')
+    
+    # LaPrompt Online Learning Optimization
+    parser.add_argument('--use_dynamic_logit_mask', action=argparse.BooleanOptionalAction, default=True, help='enable dynamic logit masking for online learning')
+    parser.add_argument('--use_forgetting_aware_init', action=argparse.BooleanOptionalAction, default=True, help='enable forgetting-aware prompt initialization')
+    parser.add_argument('--logit_mask_temp', type=float, default=1.0, help='temperature for logit mask scaling')
 
     # parser.add_argument('--beta', type=float, default=0., help='# candidates to use for peeking into the updated head')
     # parser.add_argument('--charlie', type=float, default=0., help='# candidates to use for CP hyperparameter')

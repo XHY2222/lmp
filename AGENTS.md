@@ -31,54 +31,9 @@ conda activate Si-blurry
 This repo is script-driven and does not currently ship a formal build system, lint config, or test suite.
 Use the commands below as operational defaults.
 
-### Run training (main command)
+### Run training (scripts only)
 
-```bash
-python main.py --help
-```
-
-```bash
-python main.py \
-  --mode er \
-  --dataset cifar100 \
-  --n_tasks 5 --n 50 --m 10 \
-  --rnd_seed 1 \
-  --model_name vit_base \
-  --opt_name adam --sched_name default \
-  --lr 5e-3 --batchsize 64 \
-  --memory_size 2000 \
-  --online_iter 3 \
-  --data_dir /local_datasets \
-  --note debug_run \
-  --eval_period 1000 \
-  --n_worker 4 --rnd_NM
-```
-
-### ImageNet-R run (dataset already downloaded)
-
-If `imagenet-r.tar` already exists at `autodl-tmp/dataset/imagenet-r.tar`, run with:
-
-```bash
-python main.py \
-  --mode er \
-  --dataset imagenet-r \
-  --n_tasks 5 --n 50 --m 10 \
-  --rnd_seed 1 \
-  --model_name vit_base \
-  --opt_name adam --sched_name default \
-  --lr 5e-3 --batchsize 64 \
-  --memory_size 2000 \
-  --online_iter 3 \
-  --data_dir /autodl-tmp/dataset \
-  --note er_imagenetr_seed1 \
-  --eval_period 1000 \
-  --n_worker 4 --rnd_NM
-```
-
-Notes:
-- `--data_dir` should point to the parent folder that contains `imagenet-r.tar`.
-- `datasets/Imagenet_R.py` auto-extracts `imagenet-r.tar` into `<data_dir>/imagenet-r/` when missing.
-- If your environment uses `/root/autodl-tmp/dataset`, set `--data_dir /root/autodl-tmp/dataset` instead.
+Use the packaged scripts under `scripts/` as the only documented run path.
 
 ### Run packaged experiment scripts
 
@@ -88,9 +43,13 @@ bash scripts/clib.sh
 bash scripts/l2p.sh
 bash scripts/dualprompt.sh
 bash scripts/mvp.sh
+bash scripts/laprompt.sh
 ```
 
-Note: these scripts loop over seeds `1..5`; for quick validation, prefer invoking `python main.py ...` directly for one seed.
+Notes:
+- These scripts loop over seeds `1..5` by default.
+- For one-off experiments, edit the corresponding `scripts/*.sh` file arguments directly and run that script.
+- Do not document or suggest `python main.py ...` as a run command in this repository guide.
 
 ### Lint / format
 
@@ -252,7 +211,7 @@ When changing data logic, preserve this flow unless the task explicitly requires
 
 ## 8) Validation checklist before finishing
 
-- `python main.py --help` works.
+- At least one `bash scripts/*.sh` command runs from this repo.
 - Modified module imports resolve.
 - For training-path edits, run at least one short smoke command with one seed.
 - If tests exist for touched code, run the most targeted test first, then broader tests.

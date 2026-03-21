@@ -361,12 +361,20 @@ class _Trainer():
                     acc_diff.append(np.max(cls_acc[:-1, j]) - cls_acc[-1, j])
             F_last = np.mean(acc_diff)
 
-            print(f"======== Summary =======")
-            print(f"A_auc {A_auc} | A_avg {A_avg} | A_last {A_last} | F_last {F_last}")
-            # for i in range(len(cls_acc)):
-            #     print(f"Task {i}")
-            #     print(cls_acc[i])
-            print(f"="*24)
+            summary_lines = [
+                "======== Summary =======",
+                f"A_auc {A_auc} | A_avg {A_avg} | A_last {A_last} | F_last {F_last}",
+                "=" * 24,
+            ]
+            for line in summary_lines:
+                print(line)
+
+            summary_log_path = (
+                f"{self.log_path}/logs/{self.dataset_name}/{self.note}/"
+                f"seed_{self.rnd_seed}_summary.log"
+            )
+            with open(summary_log_path, "a", encoding="utf-8") as f:
+                f.write("\n".join(summary_lines) + "\n")
 
     def add_new_class(self, class_name):
         exposed_classes = []
