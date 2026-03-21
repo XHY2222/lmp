@@ -29,6 +29,10 @@ class LaPrompt(_Trainer):
         self.use_dynamic_logit_mask = kwargs.get("use_dynamic_logit_mask", True)
         self.use_forgetting_aware_init = kwargs.get("use_forgetting_aware_init", True)
         self.logit_mask_temp = kwargs.get("logit_mask_temp", 1.0)
+        
+        # 遗忘感知初始化策略
+        self.init_strategy = kwargs.get("init_strategy", "variance_perturb")
+        self.init_scale = kwargs.get("init_scale", 0.01)
 
         if kwargs.get("tuned_epoch") is not None:
             self.laprompt_tuned_epoch = kwargs.get("tuned_epoch")
@@ -470,55 +474,153 @@ class LaPrompt(_Trainer):
 
     def _initialize_prompts_forgetting_aware(self, task_id):
         """
-        遗忘感知初始化: 基于历史任务统计信息初始化新任务提示
-        利用cls_mean和cls_cov计算相似度，引导新提示初始化
+        遗忘感知初始化策略选择器
+        根据 init_strategy 参数选择不同的初始化方法
         """
-        if not hasattr(self.model_without_ddp, 'backbone'):
+        init_strategy = getattr(self, 'init_strategy', 'variance_perturb')
+        
+        # 调试信息
+        has_stats = hasattr(self, 'cls_mean') and len(self.cls_mean) > 0
+        print(f"[Init] Task {task_id}: strategy={init_strategy}, has_stats={has_stats}, cls_mean_len={len(self.cls_mean) if hasattr(self, 'cls_mean') else 0}")
+        
+        if init_strategy == 'variance_perturb':
+            self._init_variance_perturbation(task_id)
+        elif init_strategy == 'knn_prototype':
+            self._init_knn_prototype(task_id)
+        elif init_strategy == 'gaussian_sample':
+            self._init_gaussian_sample(task_id)
+        elif init_strategy == 'task_orthogonal':
+            self._init_task_orthogonal(task_id)
+        elif init_strategy == 'mean_centered':
+            self._init_mean_centered(task_id)
+        elif init_strategy == 'contrastive_init':
+            self._init_contrastive(task_id)
+        elif init_strategy == 'zero_init':
+            self._init_zero(task_id)
+        elif init_strategy == 'random_scaled':
+            self._init_random_scaled(task_id)
+    
+    def _init_variance_perturbation(self, task_id):
+        """策略1: 基于历史方差的扰动初始化"""
+        if not self.cls_mean or not self.cls_cov:
             return
         
-        backbone = self.model_without_ddp.backbone
-        if not hasattr(backbone, 'lapromptPool'):
-            return
-        
-        prompt_pool = backbone.lapromptPool
-        if not hasattr(prompt_pool, 'prompt'):
-            return
-        
-        # 获取当前已计算的类别统计信息
-        if not self.cls_mean:
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if not hasattr(prompt_pool, 'layer_embedding'):
             return
         
         with torch.no_grad():
-            # 计算历史类别的平均特征作为参考
-            historical_means = []
-            for cls_id, mean in self.cls_mean.items():
-                if not torch.isnan(mean).any() and not torch.isinf(mean).any():
-                    historical_means.append(mean)
+            avg_var = torch.stack(list(self.cls_cov.values())).mean()
+            std = torch.sqrt(avg_var).item()
             
-            if len(historical_means) == 0:
-                return
+            for layer_idx in range(prompt_pool.layer_embedding.size(0)):
+                layer_emb = prompt_pool.layer_embedding[layer_idx]
+                perturbation = torch.randn_like(layer_emb) * std * self.init_scale
+                prompt_pool.layer_embedding[layer_idx] += perturbation
+    
+    def _init_knn_prototype(self, task_id):
+        """策略2: 基于K近邻原型的初始化"""
+        if not self.cls_mean:
+            return
+        
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if not hasattr(prompt_pool, 'prompt'):
+            return
+        
+        with torch.no_grad():
+            # 使用历史类别均值作为原型
+            prototypes = torch.stack(list(self.cls_mean.values()))
+            # 新任务提示 = 最近原型 + 扰动
+            if task_id < prompt_pool.prompt.size(0):
+                nearest_proto = prototypes.mean(dim=0)  # 简化：使用平均原型
+                prompt_pool.prompt[task_id] += nearest_proto[:prompt_pool.prompt[task_id].size(0)] * self.init_scale
+    
+    def _init_gaussian_sample(self, task_id):
+        """策略3: 从历史分布中采样初始化"""
+        if not self.cls_mean or not self.cls_cov:
+            return
+        
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if not hasattr(prompt_pool, 'prompt'):
+            return
+        
+        with torch.no_grad():
+            # 计算历史分布的均值和协方差
+            hist_mean = torch.stack(list(self.cls_mean.values())).mean(dim=0)
+            hist_cov = torch.stack(list(self.cls_cov.values())).mean(dim=0)
             
-            # 计算历史类别的中心
-            historical_center = torch.stack(historical_means).mean(dim=0)
-            
-            # 基于相似度调整新任务的提示初始化
-            # 策略: 新任务提示 = 历史平均 + 小扰动（保持一定连续性）
-            if hasattr(prompt_pool, 'prompt') and task_id < prompt_pool.prompt.size(0):
-                # 获取当前任务的提示
-                task_prompt = prompt_pool.prompt[task_id]
+            if task_id < prompt_pool.prompt.size(0):
+                # 从历史分布采样
+                sample = torch.randn_like(prompt_pool.prompt[task_id])
+                sample = sample * torch.sqrt(hist_cov[:sample.size(0)]) + hist_mean[:sample.size(0)]
+                prompt_pool.prompt[task_id] = sample * self.init_scale
+    
+    def _init_task_orthogonal(self, task_id):
+        """策略4: 任务正交初始化 - 使新任务与历史任务正交"""
+        if not self.cls_mean or task_id == 0:
+            return
+        
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if not hasattr(prompt_pool, 'prompt'):
+            return
+        
+        with torch.no_grad():
+            if task_id < prompt_pool.prompt.size(0):
+                # 计算历史任务的平均方向
+                hist_prompts = prompt_pool.prompt[:task_id].mean(dim=0)
+                current_prompt = prompt_pool.prompt[task_id]
                 
-                # 如果提示池有layer embedding，也进行调整
-                if hasattr(prompt_pool, 'layer_embedding'):
-                    # 计算layer-wise的调整
-                    num_layers = prompt_pool.layer_embedding.size(0)
-                    for layer_idx in range(num_layers):
-                        layer_emb = prompt_pool.layer_embedding[layer_idx]
-                        # 基于历史信息微调layer embedding
-                        # 这里使用简单的启发式：添加基于历史方差的扰动
-                        if self.cls_cov:
-                            avg_var = torch.stack(list(self.cls_cov.values())).mean()
-                            perturbation = torch.randn_like(layer_emb) * torch.sqrt(avg_var).item() * 0.01
-                            prompt_pool.layer_embedding[layer_idx] += perturbation
+                # 正交化：减去在历史方向上的投影
+                proj = (current_prompt * hist_prompts).sum() / (hist_prompts.norm()**2 + 1e-8)
+                orthogonal = current_prompt - proj * hist_prompts
+                prompt_pool.prompt[task_id] = orthogonal * self.init_scale
+    
+    def _init_mean_centered(self, task_id):
+        """策略5: 均值中心化初始化"""
+        if not self.cls_mean:
+            return
+        
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if not hasattr(prompt_pool, 'prompt'):
+            return
+        
+        with torch.no_grad():
+            hist_center = torch.stack(list(self.cls_mean.values())).mean(dim=0)
+            if task_id < prompt_pool.prompt.size(0):
+                # 新任务提示围绕历史中心
+                prompt_pool.prompt[task_id] = hist_center[:prompt_pool.prompt[task_id].size(0)] * self.init_scale
+    
+    def _init_contrastive(self, task_id):
+        """策略6: 对比式初始化 - 拉开与负样本的距离"""
+        if not self.cls_mean or task_id == 0:
+            return
+        
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if not hasattr(prompt_pool, 'prompt'):
+            return
+        
+        with torch.no_grad():
+            # 获取负样本（历史类别）中心
+            neg_center = torch.stack(list(self.cls_mean.values())).mean(dim=0)
+            if task_id < prompt_pool.prompt.size(0):
+                current = prompt_pool.prompt[task_id]
+                # 远离负样本中心
+                direction = current - neg_center[:current.size(0)]
+                prompt_pool.prompt[task_id] = current + direction * self.init_scale
+    
+    def _init_zero(self, task_id):
+        """策略7: 零初始化 - 作为对照"""
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if hasattr(prompt_pool, 'prompt') and task_id < prompt_pool.prompt.size(0):
+            with torch.no_grad():
+                prompt_pool.prompt[task_id].zero_()
+    
+    def _init_random_scaled(self, task_id):
+        """策略8: 随机缩放初始化"""
+        prompt_pool = self.model_without_ddp.backbone.lapromptPool
+        if hasattr(prompt_pool, 'prompt') and task_id < prompt_pool.prompt.size(0):
+            with torch.no_grad():
+                prompt_pool.prompt[task_id] *= self.init_scale
     
     def update_schedule(self, reset=False):
         if reset:

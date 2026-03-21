@@ -169,6 +169,8 @@ def base_parser():
     parser.add_argument('--use_dynamic_logit_mask', action=argparse.BooleanOptionalAction, default=True, help='enable dynamic logit masking for online learning')
     parser.add_argument('--use_forgetting_aware_init', action=argparse.BooleanOptionalAction, default=True, help='enable forgetting-aware prompt initialization')
     parser.add_argument('--logit_mask_temp', type=float, default=1.0, help='temperature for logit mask scaling')
+    parser.add_argument('--init_strategy', type=str, default='variance_perturb', help='forgetting-aware init strategy: variance_perturb, knn_prototype, gaussian_sample, task_orthogonal, mean_centered, contrastive_init, zero_init, random_scaled')
+    parser.add_argument('--init_scale', type=float, default=0.01, help='scale factor for forgetting-aware initialization')
 
     # parser.add_argument('--beta', type=float, default=0., help='# candidates to use for peeking into the updated head')
     # parser.add_argument('--charlie', type=float, default=0., help='# candidates to use for CP hyperparameter')
