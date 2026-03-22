@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NOTE="LAPROMPT_imagenet" # Short description of the experiment. (WARNING: logs/results with the same note will be overwritten!)
+NOTE="LAPROMPT_imagenet_test" # Short description of the experiment. (WARNING: logs/results with the same note will be overwritten!)
 
 MODE="laprompt"
 DATASET="imagenet-r" # cifar10, cifar100, tinyimagenet, imagenet-r
